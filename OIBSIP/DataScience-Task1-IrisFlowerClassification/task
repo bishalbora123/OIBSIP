@@ -1,0 +1,166 @@
+# Data manipulation and analysis
+#-------------------------------
+import pandas as pd
+import numpy as np
+
+# Visualization
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Scikit-Learn modules
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+
+# Set plotting style
+sns.set_theme(style="whitegrid")
+
+#  Load the Iris dataset (available directly from sklearn.datasets.load_iris()
+#-----------------------------------------------------------------------------
+iris = load_iris()
+
+# Create a Pandas DataFrame for easier manipulation and EDA
+df = pd.DataFrame(data=iris.data, columns=iris.feature_names)
+
+# Add the target variable (species) to the DataFrame
+# Mapping target integers (0, 1, 2) to their actual species names for better visualizations
+df['species'] = pd.Categorical.from_codes(iris.target, iris.target_names)
+
+# Display the first 5 rows
+display(df.head())
+
+#Perform Exploratory Data Analysis (EDA): shape, dtypes, null value check,descriptive statistics
+#-----------------------------------------------------------------------------------------------
+# 1. Check shape of the dataset
+print(f"Dataset Shape: {df.shape[0]} rows and {df.shape[1]} columns\n")
+
+# 2. Check data types and non-null counts
+print("Data Types and Non-Null Counts:")
+df.info()
+
+# 3. Check for null values
+print("\nNull Values Check:")
+print(df.isnull().sum())
+
+# 4. Descriptive statistics for numerical features
+print("\nDescriptive Statistics:")
+display(df.describe())
+
+#Visualisations: pairplot or scatter matrix showing feature distributions by species;box plots for each feature
+#---------------------------------------------------------------------------------------------------------------
+# 1. Pairplot: Shows distributions and relationships between all feature pairs by species
+plt.figure(figsize=(10, 8))
+sns.pairplot(df, hue='species', palette='viridis', markers=["o", "s", "D"])
+plt.suptitle("Pairplot of Iris Features by Species", y=1.02)
+plt.show()
+
+# 2. Box plots: Shows the distribution, median, and outliers for each feature
+plt.figure(figsize=(12, 8))
+for i, feature in enumerate(iris.feature_names):
+    plt.subplot(2, 2, i + 1)
+    sns.boxplot(x='species', y=feature, data=df, palette='viridis')
+    plt.title(f'Box Plot of {feature}')
+plt.tight_layout()
+plt.show()
+
+#5. Feature Selection (SelectKBest)
+# ==========================================
+print("\n--- Performing Feature Selection ---")
+# Separate features (X) and target (y) before selection
+X = df.drop('species', axis=1)
+y = iris.target 
+
+# Initialize the selector to keep the top 2 most discriminative features
+selector = SelectKBest(score_func=f_classif, k=2)
+
+# Fit the selector to the data and transform X
+X_selected = selector.fit_transform(X, y)
+
+# Retrieve the names of the features that were kept
+selected_mask = selector.get_support()
+selected_feature_names = X.columns[selected_mask].tolist()
+
+print(f"Original features: {list(X.columns)}")
+print(f"Selected features: {selected_feature_names}")
+
+# Update X to only include the selected features for future modeling
+X = X[selected_feature_names]
+
+#Train/test split (typically 80/20) using train_test_split
+#---------------------------------------------------------
+# Separate features (X) and target (y)
+X = df.drop('species', axis=1)
+y = iris.target # Using the integer targets for model training
+
+# Split the data: 80% for training, 20% for testing
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+print(f"Training data shape: {X_train.shape}")
+print(f"Testing data shape: {X_test.shape}")
+
+#Train at least 2 different classifiers (e.g., Logistic Regression, K-Nearest Neighbours, Decision Tree, Random Forest)
+#----------------------------------------------------------------------------------------------------------------------
+# --- Model 1: Logistic Regression ---
+log_reg = LogisticRegression(max_iter=200, random_state=42)
+log_reg.fit(X_train, y_train)
+
+# --- Model 2: Random Forest Classifier ---
+rf_clf = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_clf.fit(X_train, y_train)
+
+print("Both models have been trained successfully.")
+
+#Evaluate each model: accuracy score, confusion matrix, classification report
+#----------------------------------------------------------------------------
+(precision, recall, F1)
+def evaluate_model(model, X_test, y_test, model_name):
+    """Helper function to print evaluation metrics for a given model."""
+    predictions = model.predict(X_test)
+    
+    print(f"=== Evaluation Metrics for {model_name} ===")
+    
+    # 1. Accuracy
+    accuracy = accuracy_score(y_test, predictions)
+    print(f"Accuracy: {accuracy:.4f}\n")
+    
+    # 2. Classification Report (Precision, Recall, F1-Score)
+    print("Classification Report:")
+    print(classification_report(y_test, predictions, target_names=iris.target_names))
+    
+    # 3. Confusion Matrix
+    cm = confusion_matrix(y_test, predictions)
+    plt.figure(figsize=(6, 4))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                xticklabels=iris.target_names, yticklabels=iris.target_names)
+    plt.xlabel('Predicted Label')
+    plt.ylabel('True Label')
+    plt.title(f'Confusion Matrix: {model_name}')
+    plt.show()
+    print("-" * 50, "\n")
+
+# Evaluate Logistic Regression
+evaluate_model(log_reg, X_test, y_test, "Logistic Regression")
+
+# Evaluate Random Forest
+evaluate_model(rf_clf, X_test, y_test, "Random Forest")
+
+#  Identify and declare the best-performing model with justification
+# ------------------------------------------------------------------
+
+print("\n" + "="*50)
+print("FINAL CONCLUSION AND BEST MODEL DECLARATION")
+print("="*50)
+
+print("""
+Because the Iris dataset is considered a 'toy' dataset, it is highly structured and relatively simple to classify.
+
+MODEL RESULTS:
+Both the Logistic Regression and Random Forest models will likely achieve an accuracy of 96% to 100% depending on the specific random state of the split (with a test_size=0.2, 30 samples are tested; a 96.6% accuracy means only 1 sample out of 30 was misclassified).
+
+BEST MODEL DECLARATION: Logistic Regression is the best model for this specific task.
+
+JUSTIFICATION: 
+While both models perform exceptionally well (often tying in perfect accuracy), Logistic Regression is a significantly simpler, lighter, and more interpretable model. Because our EDA proved that the species classes are largely linearly separable (especially Setosa vs the rest, and mostly Versicolor vs Virginica based on petal length), a complex ensemble model like Random Forest is overkill. Logistic Regression solves the problem perfectly with less computational overhead and higher transparency.
+""")
